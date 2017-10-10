@@ -1,16 +1,15 @@
 
 #Dependencies: scikit-learn (pip install --upgrade scikit-learn),
 #Import packages
-#import glob
-#import itertools
-#import os,sys
+
 #Import installed packages
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from itertools import combinations
 from numpy.random import RandomState
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.cross_validation import KFold
+from sklearn.model_selection import KFold
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, ExtraTreesRegressor, ExtraTreesClassifier, BaggingRegressor, BaggingClassifier, GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis,QuadraticDiscriminantAnalysis
@@ -18,16 +17,17 @@ from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, El
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 from sklearn.svm import LinearSVC, SVC
-try: #0.16.0+ features
-    from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.kernel_ridge import KernelRidge
-    from sklearn.svm import LinearSVR
-except ImportError:
-    print("Consider upgrading scikit-learn")
+#try: #0.16.0+ features
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.kernel_ridge import KernelRidge
+from sklearn.svm import LinearSVR
+#except ImportError:
+#    print("Consider upgrading scikit-learn")
 #Import local packages
 
-# 10/11/2016 TODO: Note that cross_validation will be removed in version 0.20 --> convert this code to use model_selection
+
 # module and the new CV iterations. See http://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
+
 
 def impute_categorical(dataframe, variable_list, value_for_missing="Missing",
                        inplace=False):
@@ -148,8 +148,8 @@ def get_number_of_unique_values(X, columns="all", rows_to_scan=10000,
         if not objects_only or X.dtypes[variables]=="object":
             list_of_unique_values = X[variables][:rows_to_scan].unique()
             number_of_unique_values = len(list_of_unique_values)
-#             if skip_nans and np.isnan(list_of_unique_values).any():
-#                 number_of_unique_values -= 1
+            #             if skip_nans and np.isnan(list_of_unique_values).any():
+            #                 number_of_unique_values -= 1
             unique_counts[variables] = number_of_unique_values
 
     unique_counts.sort()
@@ -350,11 +350,11 @@ def impute_with_mean(X, columns_to_impute='all',
 
 def hist_of_numeric(X):
     """Histogram of all numeric variables of df"""
-    figsize(10,3)
+    fig = plt.figure(figsize=(10, 3))
     for col in get_numeric(X):
         print(col)
         X[col].hist(bins=50)
-        show()
+        plt.show()
 
 
 def fix_numeric_outliers(X, variable, min_value=None, max_value=None, values_to_skip=["Missing"]):
@@ -981,7 +981,7 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
                 from sklearn.metrics import mean_squared_error
                 print('MSE of simple random forest: ', mean_squared_error(sampleyy, rf.oob_prediction_))
         else:
-            from sklearn.cross_validation import train_test_split
+            from sklearn.model_selection import train_test_split
             X_train, X_test, y_train, y_test = train_test_split(trans_sampleX_temp, sampleyy, test_size=.25, random_state=random_state)
             if prob_type == 'classification':
                 rf = RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=random_state)
@@ -1599,7 +1599,6 @@ class AddInteraction(BaseEstimator, TransformerMixin):
         self.add_list = add_list
         self.degree = degree
 
-
     def fit(self, X, y=None):
         if type(self.degree) == int:
             self.degree_in = [self.degree]
@@ -1609,13 +1608,13 @@ class AddInteraction(BaseEstimator, TransformerMixin):
             temp_list = ()
             self.degree_in = [deg for deg in self.degree_in if deg >=2 and deg <=len(get_numeric(X))]
             for deg in self.degree_in:
-                temp_list += tuple(itertools.combinations(get_numeric(X), deg))
+                temp_list += tuple(combinations(get_numeric(X), deg))
             self.add_list_in = temp_list
         elif type(self.add_list) == list:
             temp_list = ()
             self.degree_in = [deg for deg in self.degree_in if deg >=2 and deg <=len(self.add_list)]
             for deg in self.degree_in:
-                temp_list += tuple(itertools.combinations(self.add_list, deg))
+                temp_list += tuple(combinations(self.add_list, deg))
             self.add_list_in = temp_list
         else:
             self.add_list_in = self.add_list

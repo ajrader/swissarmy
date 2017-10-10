@@ -1,2 +1,43 @@
+# OS generated files #
+####################
 .DS_Store
-__pycache__
+Icon
+Thumbs.db
+.tmtags
+.idea
+tags
+
+
+# Byte-compilied / optimized
+###################
+__pycache__/
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.py[cod]
+
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
+*.tar
+*.zip
+
+
+# Logs and databases #
+######################
+*.log
+*.sqlite
+
+# Jupyter Notebook
+###################
+.ipynb_checkpoints
