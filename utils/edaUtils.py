@@ -190,11 +190,9 @@ def add_transformed_categorical(X, y, col_name, drop_original=True):
     return X
 
 
-def dummy_variables(X, columns_to_dummy, drop_one_column=False, drop_original=True,
+def dummy_variables(X, columns_to_dummy, drop_one_column=False,
                     rows_to_scan=10000, special_column_rules=None, dummy_na=False):
     """
-    MUCH faster if pandas >= 0.15.0.
-
     Replace categorical columns with dummy variables. Return df and list of base
     variables.
 
@@ -203,16 +201,12 @@ def dummy_variables(X, columns_to_dummy, drop_one_column=False, drop_original=Tr
     X: pandas dataframe
 
     columns_to_dummy: list
-    columns_to_dummy: list
-        List of columns to transform
+            List of columns to transform
 
     drop_one_column: boolean, optional (default=False)
         Avoid the dummy variable trap in linear models. Should be
         false for tree-based methods.
 
-    drop_original: boolean, optional (default=True)
-        Does not include the original categorical columns in the returned
-        dataframe.
 
     rows_to_scan: integer, optional (default=10000)
         Finds the most popular column in the first rows_to_scan number
@@ -232,67 +226,33 @@ def dummy_variables(X, columns_to_dummy, drop_one_column=False, drop_original=Tr
     dummy_na: boolean, optional (default=False)
         Add a column to indicate NaNs, if False NaNs are ignored.
     """
-    # Check to see if the newest version of pandas is installed
-    if int(pd.version.version.split(".")[1]) >= 15:
-        # Make a list of columns to drop for dummies
-        if drop_one_column:
-            if special_column_rules:
-                special_column_rules = dict(special_column_rules)
+
+    # Make a list of columns to drop for dummies
+    if drop_one_column:
+        if special_column_rules:
+            special_column_rules = dict(special_column_rules)
+        else:
+            special_column_rules = {}
+        base_columns = []
+        for col in columns_to_dummy:
+            rows = special_column_rules.get(col, rows_to_scan)
+            if (rows == "all") or (rows is None):
+                base_columns.append(str(col) + "_" + str(X[col].value_counts().index[0]))
+            elif type(rows) == str:
+                base_columns.append(str(col) + "_" + rows)
             else:
-                special_column_rules = {}
-            base_columns = []
-            for col in columns_to_dummy:
-                rows = special_column_rules.get(col, rows_to_scan)
-                if (rows == "all") or (rows is None):
-                    base_columns.append(str(col) + "_" + str(X[col].value_counts().index[0]))
-                elif type(rows) == str:
-                    base_columns.append(str(col) + "_" + rows)
-                else:
-                    rows = n_valid_rows(rows, X)-1
-                    base_columns.append(str(col) + "_" + str(X.loc[:rows, col].value_counts().index[0]))
+                rows = n_valid_rows(rows, X)-1
+                base_columns.append(str(col) + "_" + str(X.loc[:rows, col].value_counts().index[0]))
 
-        # Include dummies in dataframe
-        X = pd.get_dummies(X, prefix=columns_to_dummy, dummy_na=dummy_na, columns=columns_to_dummy)
+    # Include dummies in dataframe
+    X = pd.get_dummies(X, prefix=columns_to_dummy, dummy_na=dummy_na, columns=columns_to_dummy)
 
-        # Drop most represented variable from each column
-        if drop_one_column:
-            X.drop(base_columns, axis=1, inplace=True)
+    # Drop most represented variable from each column
+    if drop_one_column:
+        X.drop(base_columns, axis=1, inplace=True)
 
-        # Drop original categorical variables if specified
-        if drop_original:
-            X.drop(columns_to_dummy, axis=1, inplace=True)
+    return X #, base_columns
 
-        return X, base_columns
-
-    # Older version of pandas
-    else:
-        listOfDroppedCols = []
-
-        if X.shape[0] < rows_to_scan:
-            rows_to_scan = X.shape[0]
-
-        if drop_one_column:
-            print("***Base variables***")
-
-        for variable in columns_to_dummy:
-            if variable in X.columns:
-                dummies = pd.get_dummies(X[variable], prefix=variable)
-                X = pd.concat([X, dummies], axis=1)
-                if drop_one_column:
-                    column_to_drop = "%s_%s" % (variable,
-                                                 X[variable][:rows_to_scan].value_counts().idxmax())
-                    print(column_to_drop)
-                    listOfDroppedCols.append(column_to_drop)
-                    X.drop([column_to_drop], axis=1, inplace=True)
-                if drop_original:
-                    X.drop([variable], axis=1, inplace=True)
-            else:
-                print("%s is not found in dataframe" % variable)
-        # Replace spaces with underscores in column names
-        X.columns = [col.replace(" ", "_") for col in X.columns]
-        if drop_one_column:
-            print("\n") # Spacing for other printed modules
-        return X, listOfDroppedCols
 
 
 # Impute numeric with mean
@@ -2530,7 +2490,7 @@ class DummyEncodeColumn(BaseEstimator, TransformerMixin):
 
 
 class LabelEncodeColumn(BaseEstimator, TransformerMixin):
-    def __init__(self,columns_to_fix=[],rows_to_scan='all'):
+    def __init__(self, columns_to_fix=[], rows_to_scan='all'):
         """
         A class that can be inserted into a pipeline
 
@@ -2554,7 +2514,7 @@ class LabelEncodeColumn(BaseEstimator, TransformerMixin):
         self.na_values={}
 
         rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
-        #self.columns_to_fix_in = get_list_of_columns_to_check(self.columns_to_fix, X.columns)
+        # self.columns_to_fix_in = get_list_of_columns_to_check(self.columns_to_fix, X.columns)
         X_temp = X[:rows_to_scan_in].copy()
         # apply labelEncoder to each column in this list
         for col in self.columns_to_fix:
