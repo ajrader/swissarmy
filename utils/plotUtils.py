@@ -62,16 +62,18 @@ def plotFI(forest, featureNames=[]):  # ,autoscale=True,headroom=0.05):
 
 
 
-def plot_conf_matrix(y_true, y_pred, normed=True, **kwargs):
+def plot_conf_matrix(y_true, y_pred, normed=True, title_str=None, **kwargs):
     my_c = metrics.confusion_matrix(y_true, y_pred)
 
     print(metrics.matthews_corrcoef(y_true, y_pred))
+    if title_str is None:
+        title_str = 'Confusion Matrix'
     if normed:
         cm_normalized = my_c.astype('float') / my_c.sum(axis=1)[:, np.newaxis]
         my_c = cm_normalized
-        plt.title('Normalized RF Classifier Confusion Matrix')
+        plt.title('Normalized '+title_str)
     else:
-        plt.title('Random Forest Classifier Confusion Matrix')
+        plt.title(title_str)
 
     sns.heatmap(my_c, annot=True, fmt='', cmap='Blues')
     plt.ylabel('True')
