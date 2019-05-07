@@ -356,6 +356,9 @@ def fix_numeric_outliers(X, variable, min_value=None, max_value=None, values_to_
         values_above_max = (X[variable] > max_value) & temp_mask
         X.loc[values_above_max, variable] = max_value
 
+    return X
+
+
 
 def get_columns_with_nulls(X, columns_to_scan = "all", rows_to_scan=100000):
     """Returns a list of columns that contain nulls in a dataframe
