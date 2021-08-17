@@ -1,36 +1,38 @@
+# Dependencies: scikit-learn (pip install --upgrade scikit-learn),
+# Import packages
 
-#Dependencies: scikit-learn (pip install --upgrade scikit-learn),
-#Import packages
-
-#Import installed packages
+# Import installed packages
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from itertools import combinations
+from itertools import combinations, product
 from numpy.random import RandomState
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import KFold
 from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, ExtraTreesRegressor, ExtraTreesClassifier, BaggingRegressor, BaggingClassifier, GradientBoostingRegressor, GradientBoostingClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis,QuadraticDiscriminantAnalysis
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, ExtraTreesRegressor, ExtraTreesClassifier, \
+    BaggingRegressor, BaggingClassifier, GradientBoostingRegressor, GradientBoostingClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, ElasticNet, Lasso, LassoLars
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 from sklearn.svm import LinearSVC, SVC
-#try: #0.16.0+ features
+# try: #0.16.0+ features
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.svm import LinearSVR
-#except ImportError:
+
+
+# except ImportError:
 #    print("Consider upgrading scikit-learn")
-#Import local packages
+# Import local packages
 
 
 # module and the new CV iterations. See http://scikit-learn.org/stable/modules/classes.html#module-sklearn.model_selection
 
 
-def impute_categorical(dataframe, variable_list, value_for_missing="Missing",
-                       inplace=False):
+def impute_categorical(dataframe: pd.DataFrame, variable_list: list, value_for_missing: str = "Missing",
+                       inplace: bool = False) -> pd.DataFrame:
     """All NaN values in dataframe are replaced with "Missing"
 
     Parameters
@@ -45,7 +47,7 @@ def impute_categorical(dataframe, variable_list, value_for_missing="Missing",
     # Change from list to dictionary where each key is a column and the value
     # is the value_for_missing. Creating this is required. Otherwise all missing
     # values in the entire dataframe would be filled with the value_for_missing
-    values=dict(zip(variable_list, [value_for_missing]*len(variable_list)))
+    values = dict(zip(variable_list, [value_for_missing] * len(variable_list)))
     if inplace:
         dataframe.fillna(values, inplace=True)
     else:
@@ -86,7 +88,7 @@ def bin_categorical(X, columns_to_bin="all", min_percent_of_total=0.05,
             rows_to_scan = X.shape[0]
 
     if columns_to_bin == "all":
-        columns_to_bin = [cols for cols in X.columns if X.dtypes[cols]=="object"]
+        columns_to_bin = [cols for cols in X.columns if X.dtypes[cols] == "object"]
     elif type(columns_to_bin) == str:
         columns_to_bin = [columns_to_bin]
 
@@ -95,11 +97,11 @@ def bin_categorical(X, columns_to_bin="all", min_percent_of_total=0.05,
     # a small part of the dataset.
     for variable in columns_to_bin:
         counts = X[variable][:rows_to_scan].value_counts()
-        variables_to_not_bucket_index = counts > rows_to_scan*min_percent_of_total
+        variables_to_not_bucket_index = counts > rows_to_scan * min_percent_of_total
         large_counts = counts.index[variables_to_not_bucket_index]
         if test:
             counts = pd.DataFrame(counts, columns=["counts"])
-            counts["percent"] = counts/counts.sum()
+            counts["percent"] = counts / counts.sum()
             counts["bucketed?"] = -variables_to_not_bucket_index
             counts["cumsum"] = counts["percent"].cumsum()
             print(counts)
@@ -109,28 +111,31 @@ def bin_categorical(X, columns_to_bin="all", min_percent_of_total=0.05,
 
 
 # This is to add the categorical variables to the model to help in imputation
-def get_number_of_unique_values(X, columns="all", rows_to_scan=10000,
-                                objects_only=False, return_series=False,
-                                skip_nans=True):
+def get_number_of_unique_values(X: pd.DataFrame, columns: str = "all", rows_to_scan: int = 10000,
+                                objects_only: bool = False, return_series: bool = False,
+                                skip_nans: bool = True):
     """Returns a Series with the number of unique values of each object column
     sorted from least to most.
 
     Parameters
     ----------
-    X: pandas df
+    :param X: pandas df
 
-    columns: list or string, optional (default="all")
+    :param columns: list or string, optional (default="all")
         Gets unique values for list of columns or a single column.
         If "all" uses all columns.
 
-    rows_to_scan: integer or 'all', optional (default=10000)
+    :param rows_to_scan: integer or 'all', optional (default=10000)
         If 'all' uses entire df. Else, uses at max rows_to_scan.
 
-    objects_only: boolean, optional (default="False")
+    :param objects_only: boolean, optional (default="False")
         If true, only object type columns are analyzed
 
-    return_series: boolean, optional (default="False")
+    :param return_series: boolean, optional (default="False")
         If True, returns Series. If False only prints it.
+
+    :param skip_nans: boolean, optional (default = True)
+        if True, don't count nulls as a 
     """
     if skip_nans:
         print("skip_nans not implemented yet")
@@ -145,14 +150,14 @@ def get_number_of_unique_values(X, columns="all", rows_to_scan=10000,
         columns = [columns]
 
     for variables in columns:
-        if not objects_only or X.dtypes[variables]=="object":
+        if not objects_only or X.dtypes[variables] == "object":
             list_of_unique_values = X[variables][:rows_to_scan].unique()
             number_of_unique_values = len(list_of_unique_values)
             #             if skip_nans and np.isnan(list_of_unique_values).any():
             #                 number_of_unique_values -= 1
             unique_counts[variables] = number_of_unique_values
 
-    unique_counts.sort()
+    unique_counts.sort_values()
     pd.set_option('display.max_rows', len(X))
     print(unique_counts)
     pd.set_option('display.max_rows', 0)
@@ -173,7 +178,7 @@ def transform_categorical(X, y, col_name):
     Returns a dataframe of mappings for categorical variables where
     each category is mapped to the mean response variable.
     """
-    temp = pd.DataFrame(pd.crosstab(X[col_name], y).apply(lambda x: x[1]/float(x.sum()), axis=1))
+    temp = pd.DataFrame(pd.crosstab(X[col_name], y).apply(lambda x: x[1] / float(x.sum()), axis=1))
     temp.columns = [str(col_name) + "_num"]
     temp[col_name] = temp.index
     return temp
@@ -241,7 +246,7 @@ def dummy_variables(X, columns_to_dummy, drop_one_column=False,
             elif type(rows) == str:
                 base_columns.append(str(col) + "_" + rows)
             else:
-                rows = n_valid_rows(rows, X)-1
+                rows = n_valid_rows(rows, X) - 1
                 base_columns.append(str(col) + "_" + str(X.loc[:rows, col].value_counts().index[0]))
 
     # Include dummies in dataframe
@@ -251,8 +256,7 @@ def dummy_variables(X, columns_to_dummy, drop_one_column=False,
     if drop_one_column:
         X.drop(base_columns, axis=1, inplace=True)
 
-    return X #, base_columns
-
+    return X  # , base_columns
 
 
 # Impute numeric with mean
@@ -286,7 +290,7 @@ def impute_with_mean(X, columns_to_impute='all',
     """
     # Enable flexibility of columns to impute
     if columns_to_impute == "all":
-        columns_to_impute = [cols for cols in X.columns if X.dtypes[cols]!="object"]
+        columns_to_impute = [cols for cols in X.columns if X.dtypes[cols] != "object"]
     elif type(columns_to_impute) == str:
         columns_to_impute = [columns_to_impute]
 
@@ -294,7 +298,7 @@ def impute_with_mean(X, columns_to_impute='all',
     if rows_to_scan > X.shape[0] or rows_to_scan is None:
         rows_to_scan = X.shape[0]
 
-    values=dict(zip(columns_to_impute, X[columns_to_impute][:rows_to_scan].mean()))
+    values = dict(zip(columns_to_impute, X[columns_to_impute][:rows_to_scan].mean()))
 
     if keep_dummies:
         dummy_missing = X[columns_to_impute].isnull().astype("int")
@@ -359,8 +363,7 @@ def fix_numeric_outliers(X, variable, min_value=None, max_value=None, values_to_
     return X
 
 
-
-def get_columns_with_nulls(X, columns_to_scan = "all", rows_to_scan=100000):
+def get_columns_with_nulls(X, columns_to_scan="all", rows_to_scan=100000):
     """Returns a list of columns that contain nulls in a dataframe
 
     Parameters
@@ -401,7 +404,7 @@ def perfect_collinearity_test(X, min_rows="infer", max_rows=None):
     """
     # Sets the minimum number of rows to start with.
     if min_rows == "infer":
-        rows_to_use = 2*X.shape[1]
+        rows_to_use = 2 * X.shape[1]
         if rows_to_use > X.shape[0]:
             rows_to_use = X.shape[0]
     else:
@@ -440,7 +443,8 @@ def perfect_collinearity_test(X, min_rows="infer", max_rows=None):
                     print(list(temp_series[temp_series.round(9) != 0].index))
                     print("")
                 else:
-                    print(template.format(temp_y_variable, " VIF = " + str(round((1.0/(1.0-R_2)),1)), "R^2 = " + str(round(R_2,4))))
+                    print(template.format(temp_y_variable, " VIF = " + str(round((1.0 / (1.0 - R_2)), 1)),
+                                          "R^2 = " + str(round(R_2, 4))))
                 results[temp_y_variable] = R_2
                 break
             rows_to_use_base += rows_to_use_base
@@ -457,7 +461,7 @@ def perfect_collinearity_test_simple(X, min_rows="infer", max_rows=None):
     """
     # Sets the minimum number of rows to start with.
     if min_rows == "infer":
-        rows_to_use = 2*X.shape[1]
+        rows_to_use = 2 * X.shape[1]
         if rows_to_use > X.shape[0]:
             rows_to_use = X.shape[0]
     else:
@@ -468,7 +472,6 @@ def perfect_collinearity_test_simple(X, min_rows="infer", max_rows=None):
         max_rows = X.shape[0]
 
     columns_in_dataframe = X.columns
-
 
     # Series to save results
     results = pd.Series()
@@ -511,28 +514,28 @@ def graph_feature_importances(model, feature_names, autoscale=True, headroom=0.0
     """
 
     if autoscale:
-        x_scale = model.feature_importances_.max()+ headroom
+        x_scale = model.feature_importances_.max() + headroom
     else:
         x_scale = 1
 
-    feature_dict=dict(zip(feature_names, model.feature_importances_))
+    feature_dict = dict(zip(feature_names, model.feature_importances_))
 
     if summarized_columns:
-        #some dummy columns need to be summarized
+        # some dummy columns need to be summarized
         for col_name in summarized_columns:
-            #sum all the features that contain col_name, store in temp sum_value
-            sum_value = sum(x for i, x in feature_dict.iteritems() if col_name in i )
+            # sum all the features that contain col_name, store in temp sum_value
+            sum_value = sum(x for i, x in feature_dict.iteritems() if col_name in i)
 
-            #now remove all keys that are part of col_name
-            keys_to_remove = [i for i in feature_dict.keys() if col_name in i ]
+            # now remove all keys that are part of col_name
+            keys_to_remove = [i for i in feature_dict.keys() if col_name in i]
             for i in keys_to_remove:
                 feature_dict.pop(i)
-            #lastly, read the summarized field
+            # lastly, read the summarized field
             feature_dict[col_name] = sum_value
 
     results = pd.Series(feature_dict.values(), index=feature_dict.keys())
     results.sort(axis=1)
-    results.plot(kind="barh", figsize=(width,len(results)/4), xlim=(0,x_scale))
+    results.plot(kind="barh", figsize=(width, len(results) / 4), xlim=(0, x_scale))
 
 
 def printall(X, max_rows=10):
@@ -553,11 +556,13 @@ def get_numeric(X):
 def describe_categorical(X):
     from IPython.display import display, HTML
     Y = get_categorical(X)
-    if len(Y)>0:
+    if len(Y) > 0:
         display(HTML(X[Y].describe().to_html()))
         print("%d rows x %d columns of categorical variables." % X[Y].shape)
     else:
-        print("There are no categorical variables in this DataFrame." )
+        print("There are no categorical variables in this DataFrame.")
+
+
 ###############################################################################
 # will add new things here
 
@@ -565,6 +570,7 @@ class DataFrameConverter(BaseEstimator, TransformerMixin):
     """
     Deprecated. Use DataFrameTransformer instead.
     """
+
     def __init__(self, columns=None):
         self.columns = list(columns)
 
@@ -573,9 +579,10 @@ class DataFrameConverter(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         X = pd.DataFrame(X, columns=self.columns)
-        X = X.convert_objects(convert_numeric=True) # If there are inconsistencies, stick this in the fit method and save
-                                                    # the dtypes, then apply the dtypes in the transform method when the data
-                                                    # is being read in. Just sample the data when inferring the dtypes for speed
+        X = X.convert_objects(
+            convert_numeric=True)  # If there are inconsistencies, stick this in the fit method and save
+        # the dtypes, then apply the dtypes in the transform method when the data
+        # is being read in. Just sample the data when inferring the dtypes for speed
         return X
 
 
@@ -587,6 +594,7 @@ class DataFrameTransformer(BaseEstimator, TransformerMixin):
 
     constructor: DataFrameTransformer(df)
     """
+
     def __init__(self, X_columns, X_dtypes):
         """
         X_columns = X.columns
@@ -624,7 +632,7 @@ def get_rows_to_scan(rows_to_scan, max_row):
         if rows_to_scan > max_row:
             rows_to_scan = max_row
     elif type(rows_to_scan) == float and rows_to_scan <= 1 and rows_to_scan >= 0:
-        rows_to_scan = int(rows_to_scan*max_row)
+        rows_to_scan = int(rows_to_scan * max_row)
     else:
         rows_to_scan = max_row
     return rows_to_scan
@@ -672,7 +680,7 @@ def get_columns_not_all_nulls(X, columns_to_check='all', rows_to_scan='all'):
     """
     columns_to_check = get_list_of_columns_to_check(columns_to_check, X.columns)
     remove_columns = get_columns_with_all_nulls(X, columns_to_check, rows_to_scan)
-    return list(set(columns_to_check)-set(remove_columns))
+    return list(set(columns_to_check) - set(remove_columns))
 
 
 def get_percentage_of_nulls(X, columns_to_check='all', rows_to_scan='all', only_nulls=True, deci=None):
@@ -704,7 +712,7 @@ def get_percentage_of_nulls(X, columns_to_check='all', rows_to_scan='all', only_
     percentage = {}
     for col in columns_to_check:
         if not (only_nulls and X[col][:rows_to_scan].count() == rows_to_scan):
-            temp = 1-X[col][:rows_to_scan].count()/float(rows_to_scan)
+            temp = 1 - X[col][:rows_to_scan].count() / float(rows_to_scan)
             if deci != None:
                 percentage[col] = round(temp, deci)
             else:
@@ -739,7 +747,7 @@ def get_percentage_of_nulls_pd(X, columns_to_check='all', rows_to_scan='all', on
     per_null_dict = get_percentage_of_nulls(X, deci=deci, columns_to_check=columns_to_check,
                                             rows_to_scan=rows_to_scan, only_nulls=only_nulls)
 
-    per_null_table = pd.DataFrame.from_dict(per_null_dict,orient='index')
+    per_null_table = pd.DataFrame.from_dict(per_null_dict, orient='index')
     per_null_table.columns = ['Percentage']
     per_null_table.sort_values(by='Percentage', ascending=False, inplace=True)
     return per_null_table
@@ -798,7 +806,7 @@ def get_value_counts_pd(X, columns, cate_cap=30):
             idx_tuple += [(col, col)]
             value_counts += ['Too many categories']
         else:
-            temp = [[col]*len(count_dict[col]), count_dict[col].keys()]
+            temp = [[col] * len(count_dict[col]), count_dict[col].keys()]
             idx_tuple += list(zip(*temp))
             value_counts += count_dict[col].values()
     multiidx = pd.MultiIndex.from_tuples(idx_tuple, names=['column', 'category'])
@@ -806,7 +814,8 @@ def get_value_counts_pd(X, columns, cate_cap=30):
     return counts_df
 
 
-def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, rows_to_scan=10000, sample_size=3000, problem_type='infer'):
+def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, rows_to_scan=10000, sample_size=3000,
+                         problem_type='infer'):
     """
     print some initial information of the dataframe including
 
@@ -856,15 +865,15 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
     print('\n')
     print('Shape of the original data: ', X.shape)
     print('\n')
-    print('Rows to scan for initial analysis: ', rows_to_scan )
+    print('Rows to scan for initial analysis: ', rows_to_scan)
     print('\n')
     print('Columns', list(sampleX.columns))
-    print(  '\n')
+    print('\n')
     nu = get_numeric(sampleX)
     print('Numeric columns: ', nu)
     print('Description of numeric columns: ')
     from IPython.display import display, HTML
-    if len(nu)>0:
+    if len(nu) > 0:
         display(HTML(sampleX[nu].describe().to_html()))
     print('\n')
     print('Categorical columns: ', list(get_categorical(sampleX)))
@@ -878,7 +887,7 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
                 idx_tuple += [(col, col)]
                 value_counts += ['Too many categories']
             else:
-                temp = [[col]*len(count_dict[col]), count_dict[col].keys()]
+                temp = [[col] * len(count_dict[col]), count_dict[col].keys()]
                 idx_tuple += list(zip(*temp))
                 value_counts += count_dict[col].values()
         multiidx = pd.MultiIndex.from_tuples(idx_tuple, names=['column', 'category'])
@@ -892,7 +901,6 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
     per_null_table.columns = ['Percentage']
     per_null_table.sort_values(by='Percentage', ascending=False, inplace=True)
     display(HTML(per_null_table.to_html()))
-
 
     if y is not None:
         sampley = y.iloc[sample_idx]
@@ -945,7 +953,8 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
                 print('MSE of simple random forest: ', mean_squared_error(sampleyy, rf.oob_prediction_))
         else:
             from sklearn.model_selection import train_test_split
-            X_train, X_test, y_train, y_test = train_test_split(trans_sampleX_temp, sampleyy, test_size=.25, random_state=random_state)
+            X_train, X_test, y_train, y_test = train_test_split(trans_sampleX_temp, sampleyy, test_size=.25,
+                                                                random_state=random_state)
             if prob_type == 'classification':
                 rf = RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=random_state)
                 rf.fit(X_train, y_train)
@@ -956,27 +965,27 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
                 rf = RandomForestRegressor(n_estimators=100, n_jobs=-1, random_state=random_state)
                 rf.fit(X_train, y_train)
                 from sklearn.metrics import mean_squared_error
-                print('MSE of simple random forest: ', mean_squared_error(y_test, rf.predict(X_test))            )
+                print('MSE of simple random forest: ', mean_squared_error(y_test, rf.predict(X_test)))
 
         feature_names = list(trans_sampleX_temp.columns)
         importance_name = [feature_names[i] for i in (np.argsort(rf.feature_importances_))]
         importance_value = np.sort(rf.feature_importances_)
         importance = pd.DataFrame(importance_value, index=importance_name, columns=['Importance'])
-        importance.plot(kind='barh', title='Feature Importance', figsize=(7, importance.shape[0]/3))
+        importance.plot(kind='barh', title='Feature Importance', figsize=(7, importance.shape[0] / 3))
 
     if tX is not None:
         rows_to_scan = get_rows_to_scan(rows_to_scan, tX.shape[0])
         sample_idx = random_generator.choice(range(tX.shape[0]), rows_to_scan)
         sampletX = tX.iloc[sample_idx]
         print('===============================================================')
-        print('For testing data:'      )
+        print('For testing data:')
         print('\n')
         print('Shape of the data: ', np.shape(tX))
-        print(   "\n")
+        print("\n")
         print('Rows to scan: ', rows_to_scan)
-        print(   "\n")
+        print("\n")
         print('Columns:', list(tX.columns))
-        print(   "\n")
+        print("\n")
         print('Numeric columns: ', get_numeric(tX))
 
         from scipy import stats
@@ -999,13 +1008,13 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
                     idx_tuple += [(col, col)]
                     value_counts += ['Too many categories']
                 else:
-                    temp = [[col]*len(count_dict[col]), count_dict[col].keys()]
+                    temp = [[col] * len(count_dict[col]), count_dict[col].keys()]
                     idx_tuple += list(zip(*temp))
                     value_counts += count_dict[col].values()
             multiidx = pd.MultiIndex.from_tuples(idx_tuple, names=['column', 'category'])
             counts_df = pd.DataFrame(value_counts, columns=['counts'], index=multiidx)
             display(HTML(counts_df.to_html()))
-            print('\n'  )
+            print('\n')
         print('Percentage of missing values (columns not displayed have no missing values): ')
         per_null_dict = get_percentage_of_nulls(sampletX, deci=3)
         per_null_table = pd.DataFrame.from_dict(per_null_dict, orient='index')
@@ -1016,7 +1025,7 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
 
     print('Potential issues: ')
     print('Columns with all missing values: ', get_columns_with_all_nulls(sampleX))
-    unique_value=[]
+    unique_value = []
     for col in sampleX.columns:
         temp = sampleX[col].unique()
         temp = [s for s in temp if str(s) != 'nan']
@@ -1026,21 +1035,23 @@ def get_initial_analysis(X, y=None, tX=None, cate_cap=30, random_state=None, row
 
     from sklearn.pipeline import Pipeline
     pipe2 = Pipeline([("null", RemoveAllNull()),
-                     ("cat", ConvertCategorical(get_categorical(sampleX_temp))),
-                     ("imp", ImputeData(columns_to_impute='all'))])
+                      ("cat", ConvertCategorical(get_categorical(sampleX_temp))),
+                      ("imp", ImputeData(columns_to_impute='all'))])
     trans_sampleX = pipe2.fit_transform(sampleX)
     res = perfect_collinearity_test_simple(trans_sampleX)
-    print('Perfect collinearity: ', list(res[res==1].index))
+    print('Perfect collinearity: ', list(res[res == 1].index))
 
     if tX is not None:
-        null_diff = set(get_columns_with_nulls(sampletX, 'all', 'all'))-set(get_columns_with_nulls(sampleX, 'all', 'all'))
+        null_diff = set(get_columns_with_nulls(sampletX, 'all', 'all')) - set(
+            get_columns_with_nulls(sampleX, 'all', 'all'))
         print('Columns having missing values in testing but having not in training: ', list(null_diff))
-        col_diff_1 = set(sampleX.columns)-set(sampletX.columns)
-        col_diff_2 = set(sampletX.columns)-set(sampleX.columns)
+        col_diff_1 = set(sampleX.columns) - set(sampletX.columns)
+        col_diff_2 = set(sampletX.columns) - set(sampleX.columns)
         print('Columns in training but not in testing: ', list(col_diff_1))
         print('Columns in testing but not in training: ', list(col_diff_2))
 
     return None
+
 
 class ImputeData(BaseEstimator, TransformerMixin):
     def __init__(self,
@@ -1107,18 +1118,21 @@ class ImputeData(BaseEstimator, TransformerMixin):
 
         if self.method in ['mean', 'median', 'max']:
             if self.method == 'mean':
-                self.values = dict(zip(self.columns_to_impute_in, X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].mean()))
+                self.values = dict(
+                    zip(self.columns_to_impute_in, X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].mean()))
             elif self.method == 'median':
-                self.values = dict(zip(self.columns_to_impute_in, X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].median()))
+                self.values = dict(
+                    zip(self.columns_to_impute_in, X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].median()))
             elif self.method == 'max':
-                self.values = dict(zip(self.columns_to_impute_in, 1+X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].max()))
+                self.values = dict(
+                    zip(self.columns_to_impute_in, 1 + X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].max()))
         elif self.method == 'mode':
             temp = np.array(X_temp[self.columns_to_impute_in][:self.rows_to_scan_in].mode())[0]
             self.values = dict(zip(self.columns_to_impute_in, temp))
         elif self.method == 'knn':
             self.models = {}
-            self.columns_available = list(set(X_temp.columns)-set(get_columns_with_nulls(X_temp, 'all', 'all')))
-            self.columns_available = list(set(self.columns_available)-set(self.columns_to_impute))
+            self.columns_available = list(set(X_temp.columns) - set(get_columns_with_nulls(X_temp, 'all', 'all')))
+            self.columns_available = list(set(self.columns_available) - set(self.columns_to_impute))
             availableX = X_temp[self.columns_available][:self.rows_to_scan_in]
             for col in self.columns_to_impute_in:
                 tempy = X_temp[col][:self.rows_to_scan_in]
@@ -1129,8 +1143,8 @@ class ImputeData(BaseEstimator, TransformerMixin):
                 self.models[col].fit(tempX, tempy)
         elif self.method == 'linear_reg':
             self.models = {}
-            self.columns_available = list(set(X_temp.columns)-set(get_columns_with_nulls(X_temp, 'all', 'all')))
-            self.columns_available = list(set(self.columns_available)-set(self.columns_to_impute))
+            self.columns_available = list(set(X_temp.columns) - set(get_columns_with_nulls(X_temp, 'all', 'all')))
+            self.columns_available = list(set(self.columns_available) - set(self.columns_to_impute))
             availableX = X_temp[self.columns_available][:self.rows_to_scan_in]
             for col in self.columns_to_impute_in:
                 tempy = X_temp[col][:self.rows_to_scan_in]
@@ -1148,7 +1162,7 @@ class ImputeData(BaseEstimator, TransformerMixin):
         if self.keep_dummies:
             temp = pd.DataFrame(index=X_temp.index)
             for col in self.columns_to_impute_in:
-                temp[(col+'_d')] = X_temp[col].isnull().astype("int")
+                temp[(col + '_d')] = X_temp[col].isnull().astype("int")
             X_temp = pd.concat([X_temp, temp], axis=1)
         if self.method in ['bfill', 'ffill']:
             index = X_temp.index
@@ -1205,21 +1219,21 @@ class RescaleData(BaseEstimator, TransformerMixin):
         if self.method != 'origin':
             self.columns_to_trans_in = get_list_of_columns_to_check(self.columns_to_trans, X.columns)
             self.rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
-            ratio = float(X.shape[0])/self.rows_to_scan_in
+            ratio = float(X.shape[0]) / self.rows_to_scan_in
             if self.method == 'standard':
                 self.coef1 = X[self.columns_to_trans_in][:self.rows_to_scan_in].mean()
                 self.coef2 = X[self.columns_to_trans_in][:self.rows_to_scan_in].std()
             elif self.method == '2_std':
                 self.coef1 = X[self.columns_to_trans_in][:self.rows_to_scan_in].mean()
-                self.coef2 = X[self.columns_to_trans_in][:self.rows_to_scan_in].std()*2
+                self.coef2 = X[self.columns_to_trans_in][:self.rows_to_scan_in].std() * 2
             elif self.method == 'max_min':
                 self.coef1 = X[self.columns_to_trans_in][:self.rows_to_scan_in].min()
-                self.coef2 = X[self.columns_to_trans_in][:self.rows_to_scan_in].max()-self.coef1
+                self.coef2 = X[self.columns_to_trans_in][:self.rows_to_scan_in].max() - self.coef1
             elif self.method == '2_norm':
-                self.coef2 = np.sqrt(ratio*np.square(X[self.columns_to_trans_in][:self.rows_to_scan_in]).sum())
+                self.coef2 = np.sqrt(ratio * np.square(X[self.columns_to_trans_in][:self.rows_to_scan_in]).sum())
                 self.coef1 = 0
             elif self.method == '1_norm':
-                self.coef2 = (np.abs(X[self.columns_to_trans_in][:self.rows_to_scan_in])).sum()*ratio
+                self.coef2 = (np.abs(X[self.columns_to_trans_in][:self.rows_to_scan_in])).sum() * ratio
                 self.coef1 = 0
         return self
 
@@ -1228,8 +1242,8 @@ class RescaleData(BaseEstimator, TransformerMixin):
             return X
         else:
             X_temp = X.copy()
-            self.coef2[self.coef2==0]=1.0
-            X_temp[self.columns_to_trans_in] = (X_temp[self.columns_to_trans_in]-self.coef1)/self.coef2
+            self.coef2[self.coef2 == 0] = 1.0
+            X_temp[self.columns_to_trans_in] = (X_temp[self.columns_to_trans_in] - self.coef1) / self.coef2
 
             return X_temp
 
@@ -1264,23 +1278,23 @@ class LogTrans(BaseEstimator, TransformerMixin):
         else:
             self.columns_to_trans_in = get_list_of_columns_to_check(self.columns_to_trans, X.columns)
             temp_numeric = get_numeric(X[self.columns_to_trans_in])
-            temp_not_numeric = set(self.columns_to_trans_in)-set(temp_numeric)
+            temp_not_numeric = set(self.columns_to_trans_in) - set(temp_numeric)
             if len(temp_not_numeric) > 0:
-                raise Exception('Columns '+str(list(temp_not_numeric))+' are not numeric!')
+                raise Exception('Columns ' + str(list(temp_not_numeric)) + ' are not numeric!')
         return self
 
     def transform(self, X, y=None):
         X_temp = X.copy()
         if self.trans_flag:
-            X_temp[self.columns_to_trans_in] = np.log(1+X_temp[self.columns_to_trans_in])
+            X_temp[self.columns_to_trans_in] = np.log(1 + X_temp[self.columns_to_trans_in])
         return X_temp
 
 
 def impute_data(X, method='mean',
-                   columns_to_impute='all',
-                   keep_dummies=True,
-                   impute_inf=True,
-                   rows_to_scan='all'):
+                columns_to_impute='all',
+                keep_dummies=True,
+                impute_inf=True,
+                rows_to_scan='all'):
     """Returns a DateFrame whose missing values will be imputed
 
     Parameters
@@ -1327,7 +1341,7 @@ def impute_data(X, method='mean',
     if keep_dummies:
         temp = pd.DataFrame(index=X.index)
         for col in columns_to_impute:
-            temp[(col+'_d')] = X[col].isnull().astype("int")
+            temp[(col + '_d')] = X[col].isnull().astype("int")
         X = pd.concat([X, temp], axis=1)
 
     if method in ['bfill', 'ffill']:
@@ -1336,13 +1350,13 @@ def impute_data(X, method='mean',
         X[columns_to_impute] = X[columns_to_impute].fillna(method=method)
         X = X.reindex(index)
     elif method == 'mean':
-        values=dict(zip(columns_to_impute, X[columns_to_impute][:rows_to_scan].mean()))
+        values = dict(zip(columns_to_impute, X[columns_to_impute][:rows_to_scan].mean()))
         X = X.fillna(values)
     elif method == 'median':
-        values=dict(zip(columns_to_impute, X[columns_to_impute][:rows_to_scan].median()))
+        values = dict(zip(columns_to_impute, X[columns_to_impute][:rows_to_scan].median()))
         X = X.fillna(values)
     elif method == 'max':
-        values=dict(zip(columns_to_impute, 1+X[columns_to_impute][:rows_to_scan].max()))
+        values = dict(zip(columns_to_impute, 1 + X[columns_to_impute][:rows_to_scan].max()))
         X = X.fillna(values)
     return X
 
@@ -1389,20 +1403,20 @@ class ConvertCategorical(BaseEstimator, TransformerMixin):
             self.categorical_columns = get_categorical(X)
         self.map_values = {}
         self.dummy_values = {}
-        self.na_values={}
+        self.na_values = {}
         rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
         X_temp = X[:rows_to_scan_in].copy()
         for col in self.categorical_columns:
             if self.method == 'factorize':
-                map_values = X_temp[col].unique() # Can sample data here for speed
+                map_values = X_temp[col].unique()  # Can sample data here for speed
                 self.map_values[col] = {key: index for index, key in enumerate(map_values)}
             elif self.method == 'value_counts':
                 self.map_values[col] = dict(X_temp[col].value_counts())
-                self.na_values[col+"_f"] = X_temp[col].isnull().sum()
+                self.na_values[col + "_f"] = X_temp[col].isnull().sum()
             elif self.method == 'group_means':
                 yy = y[:rows_to_scan_in].copy()
-                self.map_values[col] = dict(pd.crosstab(X_temp[col], yy).apply(lambda x: x[1]/float(x.sum()), axis=1))
-                self.na_values[col+"_f"] = yy[X_temp[col].isnull()].mean()
+                self.map_values[col] = dict(pd.crosstab(X_temp[col], yy).apply(lambda x: x[1] / float(x.sum()), axis=1))
+                self.na_values[col + "_f"] = yy[X_temp[col].isnull()].mean()
             elif self.method == 'dummy':
                 self.dummy_values[col] = X_temp[col].unique()
         return self
@@ -1411,15 +1425,15 @@ class ConvertCategorical(BaseEstimator, TransformerMixin):
         X_temp = X.copy()
         if self.method in ['factorize', 'value_counts', 'group_means']:
             for col in self.categorical_columns:
-                X_temp[str(col)+"_f"] = X_temp[col].map(self.map_values[col], "ignore")
-                X_temp[str(col)+"_f"] = X_temp[col].map(self.map_values[col], "ignore")
+                X_temp[str(col) + "_f"] = X_temp[col].map(self.map_values[col], "ignore")
+                X_temp[str(col) + "_f"] = X_temp[col].map(self.map_values[col], "ignore")
         elif self.method == 'dummy':
             for col in self.categorical_columns:
                 for cat in self.dummy_values[col]:
                     if str(cat) == 'nan':
-                        X_temp[str(col)+'_'+str(cat)] = X_temp[col].isnull().astype(int)
+                        X_temp[str(col) + '_' + str(cat)] = X_temp[col].isnull().astype(int)
                     else:
-                        X_temp[str(col)+'_'+str(cat)] = (X_temp[col] == cat).astype(int)
+                        X_temp[str(col) + '_' + str(cat)] = (X_temp[col] == cat).astype(int)
         if self.method in ['value_counts', 'group_means']:
             X_temp = X_temp.fillna(self.na_values)
         X_temp = X_temp[get_numeric(X_temp)]
@@ -1487,18 +1501,18 @@ class FixNumericOutlier(BaseEstimator, TransformerMixin):
                 self.columns_to_fix_in = get_list_of_columns_to_check(self.columns_to_fix, X.columns)
 
             temp_numeric = get_numeric(X[self.columns_to_fix_in])
-            temp_not_numeric = set(self.columns_to_fix_in)-set(temp_numeric)
+            temp_not_numeric = set(self.columns_to_fix_in) - set(temp_numeric)
             if len(temp_not_numeric) > 0:
-                raise Exception('Columns '+str(list(temp_not_numeric))+' are not numeric!')
+                raise Exception('Columns ' + str(list(temp_not_numeric)) + ' are not numeric!')
             X_temp = X[:rows_to_scan_in].copy()
             for col in self.columns_to_fix_in:
                 temp = X_temp[col][np.isfinite(X_temp[col])]
                 if self.criteria == 'percentile':
-                    self.max_val[col] = np.percentile(temp, 100-self.coef)
+                    self.max_val[col] = np.percentile(temp, 100 - self.coef)
                     self.min_val[col] = np.percentile(temp, self.coef)
                 elif self.criteria == 'sd':
-                    self.max_val[col] = np.mean(temp)+self.coef*np.std(temp)
-                    self.min_val[col] = np.mean(temp)-self.coef*np.std(temp)
+                    self.max_val[col] = np.mean(temp) + self.coef * np.std(temp)
+                    self.min_val[col] = np.mean(temp) - self.coef * np.std(temp)
         return self
 
     def transform(self, X, y=None):
@@ -1569,13 +1583,13 @@ class AddInteraction(BaseEstimator, TransformerMixin):
             self.degree_in = self.degree
         if self.add_list is None:
             temp_list = ()
-            self.degree_in = [deg for deg in self.degree_in if deg >=2 and deg <=len(get_numeric(X))]
+            self.degree_in = [deg for deg in self.degree_in if deg >= 2 and deg <= len(get_numeric(X))]
             for deg in self.degree_in:
                 temp_list += tuple(combinations(get_numeric(X), deg))
             self.add_list_in = temp_list
         elif type(self.add_list) == list:
             temp_list = ()
-            self.degree_in = [deg for deg in self.degree_in if deg >=2 and deg <=len(self.add_list)]
+            self.degree_in = [deg for deg in self.degree_in if deg >= 2 and deg <= len(self.add_list)]
             for deg in self.degree_in:
                 temp_list += tuple(combinations(self.add_list, deg))
             self.add_list_in = temp_list
@@ -1641,7 +1655,7 @@ class DimensionReduction(BaseEstimator, TransformerMixin):
         else:
             temp = self.model.transform(X)
             temp = pd.DataFrame(temp, index=X.index)
-            col_names = ['comp_'+str(i) for i in range(temp.shape[1])]
+            col_names = ['comp_' + str(i) for i in range(temp.shape[1])]
             temp.columns = col_names
             return temp
 
@@ -1779,7 +1793,7 @@ class ModelPredictor(BaseEstimator, TransformerMixin):
                     self.model = RandomForestRegressor()
             else:
                 if self.random_number == -1:
-                    self.random_number = np.random.choice(range(1,10000))/10000.0
+                    self.random_number = np.random.choice(range(1, 10000)) / 10000.0
                 self.model_name = self.modelwithparams[0]
                 para_dict = self.modelwithparams[1]
                 self.para = get_params_from_dict(para_dict, self.random_number)
@@ -1834,25 +1848,24 @@ class ModelPredictor(BaseEstimator, TransformerMixin):
                     elif self.model_name == 'GBR':
                         self.model = GradientBoostingRegressor(**self.para)
 
-
             self.flag = False
 
         nullcol = get_columns_with_nulls(X, 'all', 'all')
         if len(nullcol) > 0:
-            raise Exception('Columns '+str(list(nullcol))+' have missing values!')
+            raise Exception('Columns ' + str(list(nullcol)) + ' have missing values!')
         self.model.fit(X, y)
         return self
 
     def predict_proba(self, X, y=None):
         nullcol = get_columns_with_nulls(X, 'all', 'all')
         if len(nullcol) > 0:
-            raise Exception('Columns '+str(list(nullcol))+' have missing values!')
+            raise Exception('Columns ' + str(list(nullcol)) + ' have missing values!')
         return self.model.predict_proba(X)
 
     def predict(self, X, y=None):
         nullcol = get_columns_with_nulls(X, 'all', 'all')
         if len(nullcol) > 0:
-            raise Exception('Columns '+str(list(nullcol))+' have missing values!')
+            raise Exception('Columns ' + str(list(nullcol)) + ' have missing values!')
         return self.model.predict(X)
 
 
@@ -1871,8 +1884,8 @@ def get_params_from_dict(param_dict, random_number):
 
 
     """
-    temp = list(itertools.product(*param_dict.values()))
-    param_choose = temp[int(random_number*len(temp))]
+    temp = list(product(*param_dict.values()))
+    param_choose = temp[int(random_number * len(temp))]
     param = {}
     for i in range(len(param_choose)):
         param[list(param_dict.keys())[i]] = param_choose[i]
@@ -1900,6 +1913,7 @@ class RemoveAllNull(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         self.columns_to_remove = get_columns_with_all_nulls(X, self.columns_to_check)
         return self
+
     def transform(self, X, y=None):
         X_temp = X.copy()
         for col in X_temp.columns:
@@ -1914,8 +1928,8 @@ def report_grid_score(grid_scores, n_top=3):
     for i, score in enumerate(top_scores):
         print("Model with rank: {0}".format(i + 1))
         print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
-              score.mean_validation_score,
-              np.std(score.cv_validation_scores)))
+            score.mean_validation_score,
+            np.std(score.cv_validation_scores)))
         print("Parameters: {0}".format(score.parameters))
         print("")
 
@@ -1939,10 +1953,11 @@ def report_grid_score_with_params(grid_scores, n_top=3, model_key=None, random_n
     for i, score in enumerate(top_scores):
         print("Model with rank: {0}".format(i + 1))
         print("Mean validation score: {0:.3f} (std: {1:.3f})".format(
-              score.mean_validation_score,
-              np.std(score.cv_validation_scores)))
+            score.mean_validation_score,
+            np.std(score.cv_validation_scores)))
         print("Parameters: {0}".format(score.parameters))
-        print("Parameters of the model: ", get_params_from_dict(score.parameters[model_key][1], score.parameters[random_number_key]))
+        print("Parameters of the model: ",
+              get_params_from_dict(score.parameters[model_key][1], score.parameters[random_number_key]))
         print("\n")
 
 
@@ -1969,7 +1984,7 @@ def report_grid_score_detail(random_search, charts=True):
         for col in get_categorical(result_df):
             cat_plot = result_df.score.groupby(result_df[col]).mean()
             cat_plot.sort()
-            cat_plot.plot(kind="barh", xlim=(.5, None), figsize=(7, cat_plot.shape[0]/2))
+            cat_plot.plot(kind="barh", xlim=(.5, None), figsize=(7, cat_plot.shape[0] / 2))
             plt.show()
     return result_df
 
@@ -2018,7 +2033,7 @@ def cross_val_pred_both(model, X_train, y_train, X_test, cv=5, n_class=2, proble
         pred_test = np.zeros(len(X_test))
 
     if cv > 1:
-        kfold=KFold(len(X_train), n_folds=cv)
+        kfold = KFold(len(X_train), n_folds=cv)
 
         if problem_type == 'classification':
             for train_index, test_index in kfold:
@@ -2031,7 +2046,7 @@ def cross_val_pred_both(model, X_train, y_train, X_test, cv=5, n_class=2, proble
                 pred_train[test_index] = model.predict(X_train.iloc[test_index])
                 pred_test = pred_test + model.predict(X_test)
 
-        pred_test = pred_test/float(cv)
+        pred_test = pred_test / float(cv)
     elif cv == 1:
         if problem_type == 'classification':
             model.fit(X_train, y_train)
@@ -2091,17 +2106,17 @@ def get_prediction_from_models(grid_scores, model, model_pick_list, X_train, y_t
     for rank_no in model_pick_list:
         number += 1
         if print_process:
-            print('Processing Model '+str(number)+' of '+str(total))
-        para = top_scores[(rank_no-1)].parameters
+            print('Processing Model ' + str(number) + ' of ' + str(total))
+        para = top_scores[(rank_no - 1)].parameters
         model.set_params(**para)
         prob_train, prob_test = cross_val_pred_both(model, X_train, y_train, X_test, cv, n_class, problem_type)
         if problem_type == 'classification':
             for i in range(1, n_class):
-                pred_train['model'+str(rank_no)+'_class'+str(i)] = prob_train[:,i]
-                pred_test['model'+str(rank_no)+'_class'+str(i)] = prob_test[:,i]
+                pred_train['model' + str(rank_no) + '_class' + str(i)] = prob_train[:, i]
+                pred_test['model' + str(rank_no) + '_class' + str(i)] = prob_test[:, i]
         else:
-            pred_train['model'+str(rank_no)] = prob_train
-            pred_test['model'+str(rank_no)] = prob_test
+            pred_train['model' + str(rank_no)] = prob_train
+            pred_test['model' + str(rank_no)] = prob_test
     return pred_train, pred_test
 
 
@@ -2158,7 +2173,7 @@ class TopFeatures(BaseEstimator, TransformerMixin):
         if self.max_features != 'all':
             rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
             if type(self.max_features) == float:
-                self.max_features_in = int(self.max_features*X.shape[1])+1
+                self.max_features_in = int(self.max_features * X.shape[1]) + 1
             else:
                 self.max_features_in = self.max_features
             if self.problem_type == "infer":
@@ -2167,16 +2182,20 @@ class TopFeatures(BaseEstimator, TransformerMixin):
                 prob_type = self.problem_type
             if prob_type == "regression":
                 if self.method == "RandomForest":
-                    self.model = RandomForestRegressor(n_estimators=1000, max_features=3, max_depth=2, bootstrap=False, n_jobs=-1)
+                    self.model = RandomForestRegressor(n_estimators=1000, max_features=3, max_depth=2, bootstrap=False,
+                                                       n_jobs=-1)
                 elif self.method == "ExtraTree":
-                    self.model = ExtraTreesRegressor(n_estimators=1000, max_features=3, max_depth=3, bootstrap=False, n_jobs=-1)
+                    self.model = ExtraTreesRegressor(n_estimators=1000, max_features=3, max_depth=3, bootstrap=False,
+                                                     n_jobs=-1)
                 else:
                     self.model = self.method
             else:
                 if self.method == "RandomForest":
-                    self.model = RandomForestClassifier(n_estimators=1000, max_features=3, max_depth=2, bootstrap=False, n_jobs=-1)
+                    self.model = RandomForestClassifier(n_estimators=1000, max_features=3, max_depth=2, bootstrap=False,
+                                                        n_jobs=-1)
                 elif self.method == "ExtraTree":
-                    self.model = ExtraTreesClassifier(n_estimators=1000, max_features=3, max_depth=3, bootstrap=False, n_jobs=-1)
+                    self.model = ExtraTreesClassifier(n_estimators=1000, max_features=3, max_depth=3, bootstrap=False,
+                                                      n_jobs=-1)
                 else:
                     self.model = self.method
             self.model.fit(X[:rows_to_scan_in], y[:rows_to_scan_in])
@@ -2243,7 +2262,7 @@ class PermutationImportance():
                 self.model = ExtraTreesClassifier(n_estimators=100, n_jobs=-1)
             else:
                 self.model = self.method
-        from sklearn.cross_validation import train_test_split
+        from sklearn.model_selection import train_test_split
         X_train, X_test, y_train, y_test = train_test_split(X[:rows_to_scan_in], y[:rows_to_scan_in], test_size=.25)
         self.model.fit(X_train, y_train)
         temp_importance = []
@@ -2257,7 +2276,7 @@ class PermutationImportance():
                 temp = temp.reindex(np.random.permutation(temp.index))
                 temp.index = X_test_permuted.index
                 X_test_permuted.loc[:, col] = temp
-                temp_score = mean_squared_error(y_test, self.model.predict(X_test_permuted))/base_score
+                temp_score = mean_squared_error(y_test, self.model.predict(X_test_permuted)) / base_score
                 temp_importance.append(temp_score)
         else:
             from sklearn.metrics import roc_auc_score
@@ -2269,7 +2288,8 @@ class PermutationImportance():
                 temp = temp.reindex(np.random.permutation(temp.index))
                 temp.index = X_test_permuted.index
                 X_test_permuted.loc[:, col] = temp
-                temp_score = base_score/roc_auc_score(pd.get_dummies(y_test), self.model.predict_proba(X_test_permuted))
+                temp_score = base_score / roc_auc_score(pd.get_dummies(y_test),
+                                                        self.model.predict_proba(X_test_permuted))
                 temp_importance.append(temp_score)
 
         self.feature_importances_ = temp_importance
@@ -2338,26 +2358,26 @@ class SimulPermutationImportance():
                 temp = sampleX[col]
                 temp = temp.reindex(np.random.permutation(temp.index))
                 temp.index = sampleX.index
-                sampleX.loc[:, col+'_pemu_'+str(i)] = temp
+                sampleX.loc[:, col + '_pemu_' + str(i)] = temp
 
         self.model.fit(sampleX, sampley)
         results = pd.Series(self.model.feature_importances_, sampleX.columns)
         temp_importance = []
         for col in X.columns:
             temp_a = results.loc[col]
-            temp_b = results.loc[[col+'_pemu_'+str(i) for i in range(self.n_random_feature_ratio)]]
-            temp_z_score = (temp_a - temp_b.mean())/temp_b.std()
+            temp_b = results.loc[[col + '_pemu_' + str(i) for i in range(self.n_random_feature_ratio)]]
+            temp_z_score = (temp_a - temp_b.mean()) / temp_b.std()
             from scipy.stats import norm
             temp_p_value = norm.sf(abs(temp_z_score))
-            temp_importance.append(1-temp_p_value)
+            temp_importance.append(1 - temp_p_value)
 
         self.feature_importances_ = temp_importance
         return self
 
 
 class ConvertToDict(BaseEstimator, TransformerMixin):
-#class to convert a dollar amount to a float
-    def __init__(self,columns_to_fix=[],convert_dict={'Y':1,'N':0}):
+    # class to convert a dollar amount to a float
+    def __init__(self, columns_to_fix=[], convert_dict={'Y': 1, 'N': 0}):
         """
         A class that can be inserted into a pipeline
 
@@ -2376,7 +2396,7 @@ class ConvertToDict(BaseEstimator, TransformerMixin):
         self.convert_dict = convert_dict
 
     def fit(self, X, y=None):
-        #my_convert_dict = {'Y':1,'N': 0}
+        # my_convert_dict = {'Y':1,'N': 0}
         if type(self.columns_to_fix) == 'str':
             self.columns_to_fix = [self.columns_to_fix]
 
@@ -2384,7 +2404,6 @@ class ConvertToDict(BaseEstimator, TransformerMixin):
             self.columns_to_fix = self.columns_to_fix
         self.convert_dict = self.convert_dict
         return self
-
 
     def transform(self, X, y=None):
         X_temp = X.copy()
@@ -2394,9 +2413,9 @@ class ConvertToDict(BaseEstimator, TransformerMixin):
         return X_temp
 
 
-#class to drop a list of columns
+# class to drop a list of columns
 class DropColumns(BaseEstimator, TransformerMixin):
-    def __init__(self,columns_to_drop=[]):
+    def __init__(self, columns_to_drop=[]):
         """
         A class that can be inserted into a pipeline
 
@@ -2451,12 +2470,12 @@ class DummyEncodeColumn(BaseEstimator, TransformerMixin):
         self.keep_dummies = keep_dummies
 
     def fit(self, X, y=None):
-        #self.map_values = {}
+        # self.map_values = {}
         self.dummy_values = {}
-        #self.na_values={}
+        # self.na_values={}
 
         rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
-        #self.columns_to_fix_in = get_list_of_columns_to_check(self.columns_to_fix, X.columns)
+        # self.columns_to_fix_in = get_list_of_columns_to_check(self.columns_to_fix, X.columns)
         X_temp = X[:rows_to_scan_in].copy()
         # apply labelEncoder to each column in this list
         for col in self.columns_to_fix:
@@ -2476,7 +2495,7 @@ class DummyEncodeColumn(BaseEstimator, TransformerMixin):
          """
         for col in self.columns_to_fix:
             for cat in self.dummy_values[col]:
-                cat_col = str(col)+'_'+str(cat)
+                cat_col = str(col) + '_' + str(cat)
                 if str(cat) == 'nan':
                     X_temp[cat_col] = X_temp[col].isnull().astype(int)
                 else:
@@ -2486,8 +2505,8 @@ class DummyEncodeColumn(BaseEstimator, TransformerMixin):
             # if keep_dummies is false remove the original column name and the last category
             if not self.keep_dummies:
                 original_cols.remove(str(col))
-                original_cols.pop() #note pop removes the last element from a list
-        X_temp =X_temp[original_cols]
+                original_cols.pop()  # note pop removes the last element from a list
+        X_temp = X_temp[original_cols]
 
         return X_temp
 
@@ -2514,7 +2533,7 @@ class LabelEncodeColumn(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         self.map_values = {}
         self.dummy_values = {}
-        self.na_values={}
+        self.na_values = {}
 
         rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
         # self.columns_to_fix_in = get_list_of_columns_to_check(self.columns_to_fix, X.columns)
@@ -2530,13 +2549,13 @@ class LabelEncodeColumn(BaseEstimator, TransformerMixin):
         X_temp = X.copy()
         original_cols = list(X_temp.columns)
         for col in self.columns_to_fix:
-            X_temp[str(col)+"_le"] = X_temp[col].map(self.map_values[col], "ignore")
-            X_temp[str(col)+"_le"] =  X_temp[str(col)+"_le"].fillna(-1)
+            X_temp[str(col) + "_le"] = X_temp[col].map(self.map_values[col], "ignore")
+            X_temp[str(col) + "_le"] = X_temp[str(col) + "_le"].fillna(-1)
             # fill all remaining null values with -1
             # remove the original column name and add the new column name
             original_cols.remove(str(col))
-            original_cols.append(str(col+"_le"))
-        X_temp =X_temp[original_cols]
+            original_cols.append(str(col + "_le"))
+        X_temp = X_temp[original_cols]
 
         return X_temp
 
@@ -2560,18 +2579,18 @@ def summarize_dataframe(df, columns_to_check='all', show_progress=False, arity_t
         nmiss = nrow - df[col].value_counts().sum()
         narity = len(df[col].unique())
         if show_progress:
-            #print(col, df[col].dtype,nmiss, "\t", narity,":\t", df[col].ix[8320])
-            #else:
-            print(col, df[col].dtype,nmiss, "\t", narity)
+            # print(col, df[col].dtype,nmiss, "\t", narity,":\t", df[col].ix[8320])
+            # else:
+            print(col, df[col].dtype, nmiss, "\t", narity)
         accept_val = None
         if narity < arity_thresh:
             accept_val = df[col].unique()
         else:
             accept_val = 'Too many to show'
-        summary_df.loc[len_df] = [col,df[col].dtype,nmiss,narity,accept_val]
-        len_df+=1
+        summary_df.loc[len_df] = [col, df[col].dtype, nmiss, narity, accept_val]
+        len_df += 1
     # assing fraction of missing
-    summary_df['x_missing'] = summary_df['nmissing']/float(nrow)
+    summary_df['x_missing'] = summary_df['nmissing'] / float(nrow)
 
     return summary_df
 
@@ -2588,7 +2607,8 @@ class FillMissingValue(BaseEstimator, TransformerMixin):
 
         returns a pandas dataframe
     """
-    def __init__(self,fill_value = 0,columns_to_fix='all',rows_to_scan='all', keep_dummies=False, fill_inf=True):
+
+    def __init__(self, fill_value=0, columns_to_fix='all', rows_to_scan='all', keep_dummies=False, fill_inf=True):
 
         self.fill_value = fill_value
         self.columns_to_fix = columns_to_fix
@@ -2614,13 +2634,13 @@ class FillMissingValue(BaseEstimator, TransformerMixin):
         self.rows_to_scan_in = get_rows_to_scan(self.rows_to_scan, X.shape[0])
 
         # check if the fill_values are a list
-        if type(self.fill_value)==list:
-            self.values = dict(zip(self.columns_to_fix_in,self.fill_value))
-        elif type(self.fill_value)==dict:
+        if type(self.fill_value) == list:
+            self.values = dict(zip(self.columns_to_fix_in, self.fill_value))
+        elif type(self.fill_value) == dict:
             self.values = self.fill_value
         else:
             for c in self.columns_to_fix_in:
-                self.values[c]=self.fill_value
+                self.values[c] = self.fill_value
 
         return self
 
@@ -2632,11 +2652,11 @@ class FillMissingValue(BaseEstimator, TransformerMixin):
         if self.keep_dummies:
             temp = pd.DataFrame(index=X_temp.index)
             for col in self.columns_to_fix_in:
-                temp[(col+'_d')] = X_temp[col].isnull().astype("int")
+                temp[(col + '_d')] = X_temp[col].isnull().astype("int")
             X_temp = pd.concat([X_temp, temp], axis=1)
         original_cols = list(X_temp.columns)
         X_temp = X_temp.fillna(self.values)
-        X_temp =X_temp[original_cols]
+        X_temp = X_temp[original_cols]
 
         return X_temp
 
@@ -2648,12 +2668,12 @@ def parse_dollars_to_float(x):
     :return: y --> float
     """
     import locale
-    locale.setlocale( locale.LC_ALL, 'en_US.UTF-8' )
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
     try:
         if x.startswith('('):
-        #print(x)
-            y = -1.0*locale.atof(x[2:-1])
-        #print(x,y)
+            # print(x)
+            y = -1.0 * locale.atof(x[2:-1])
+        # print(x,y)
         elif x.startswith('$'):
             y = locale.atof(x[1:])
     except AttributeError:
@@ -2662,8 +2682,8 @@ def parse_dollars_to_float(x):
 
 
 class dollarsToFloat(BaseEstimator, TransformerMixin):
-    #class to convert a dollar amount to a float
-    def __init__(self,columns_to_fix=[]):
+    # class to convert a dollar amount to a float
+    def __init__(self, columns_to_fix=[]):
         """
         A class that can be inserted into a pipeline
 
@@ -2687,10 +2707,7 @@ class dollarsToFloat(BaseEstimator, TransformerMixin):
         self.columns_to_fix = self.columns_to_fix
         return self
 
-
     def transform(self, X, y=None):
-
         X[self.columns_to_fix] = X[self.columns_to_fix].apply(lambda x: parse_dollars_to_float(x))
 
         return X
-
